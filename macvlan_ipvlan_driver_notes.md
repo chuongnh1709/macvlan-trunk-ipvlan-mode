@@ -67,7 +67,7 @@ Create the macvlan network and run a container attaching to it:
 ```
 # Macvlan  (--macvlan_mode= Defaults to Bridge mode if not specified)
 docker network  create  -d macvlan  --subnet=192.168.1.0/24 --gateway=192.168.1.1 -o host_iface=eth0 macnet100
-docker  run --net=macnet100 -it --rm busybox
+docker  run --net=macnet100 -it --rm alpine /bin/sh
 ```
 
 You can explicitly specify the `bridge` mode option `-o macvlan_mode=bridge`. It is the default so will be in `bridge` mode either way.
@@ -94,7 +94,7 @@ Create the ipvlan network and run a container attaching to it:
 ```
 # Ipvlan  (--ipvlan_mode= Defaults to L2 mode if not specified)
 docker network  create -d ipvlan  --subnet=192.168.1.0/24 --gateway=192.168.1.1 -o host_iface=eth0 ipnet100
-docker  run --net=ipnet100 -it --rm busybox
+docker  run --net=ipnet100 -it --rm alpine /bin/sh
 ```
 
 You can explicitly specify the `l2` mode option `-o ipvlan_mode=l2`. It is the default so will be in `l2` mode either way.
@@ -126,8 +126,8 @@ In the first network tagged and isolated by the Docker host, `eth0.50` is the pa
 docker network  create  -d macvlan  --subnet=192.168.50.0/24 --gateway=192.168.50.1 -o host_iface=eth0.50 macvlan50
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
-docker run --net=macvlan50 -it --name macvlan_test5 --rm busybox
-docker run --net=macvlan50 -it --name macvlan_test6 --rm busybox
+docker run --net=macvlan50 -it --name macvlan_test5 --rm alpine /bin/sh
+docker run --net=macvlan50 -it --name macvlan_test6 --rm alpine /bin/sh
 ```
 
 **Vlan ID 60**
@@ -139,8 +139,8 @@ In the second network, tagged and isolated by the Docker host, `eth0.60` is the 
 docker network  create  -d macvlan  --subnet=192.168.60.0/24 --gateway=192.168.60.1 -o host_iface=eth0.60 -o --macvlan_mode=bridge macvlan60
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
-docker run --net=macvlan60 -it --name macvlan_test7 --rm ubuntu
-docker run --net=macvlan60 -it --name macvlan_test8 --rm ubuntu
+docker run --net=macvlan60 -it --name macvlan_test7 --rm alpine /bin/sh
+docker run --net=macvlan60 -it --name macvlan_test8 --rm alpine /bin/sh
 ```
 
 
@@ -169,8 +169,8 @@ In the first network tagged and isolated by the Docker host, `eth0.20` is the pa
 docker network  create  -d ipvlan  --subnet=192.168.20.0/24 --gateway=192.168.20.1 -o host_iface=eth0.20 ipvlan20
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
-docker run --net=ipvlan20 -it --name ivlan_test1 --rm busybox
-docker run --net=ipvlan20 -it --name ivlan_test2 --rm busybox
+docker run --net=ipvlan20 -it --name ivlan_test1 --rm alpine /bin/sh
+docker run --net=ipvlan20 -it --name ivlan_test2 --rm alpine /bin/sh
 ```
 
 **Vlan ID 30**
@@ -182,8 +182,8 @@ In the second network, tagged and isolated by the Docker host, `eth0.30` is the 
 docker network  create  -d ipvlan  --subnet=192.168.30.0/24 --gateway=192.168.30.1 -o host_iface=eth0.30 --ipvlan_mode=l2 ipvlan30
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
-docker run --net=ipvlan30 -it --name ivlan_test3 --rm ubuntu
-docker run --net=ipvlan30 -it --name ivlan_test4 --rm ubuntu
+docker run --net=ipvlan30 -it --name ivlan_test3 --rm alpine /bin/sh
+docker run --net=ipvlan30 -it --name ivlan_test4 --rm alpine /bin/sh
 ```
 
 The gateway is set inside of the container as the default gateway. That gateway would typically be an external router on the network.
@@ -217,10 +217,10 @@ The mode ` -o ipvlan_mode=l3` must be explicitly specified since the default ipv
 ```
 # Create the Ipvlan L3 network
 docker network  create -d ipvlan --subnet=192.168.120.0/24 -o host_iface=eth0 -o ipvlan_mode=l3 ipvlan120
-docker run --net=ipvlan120 -it --rm busybox 
+docker run --net=ipvlan120 -it --rm alpine /bin/sh 
 
 # Or specify a specific IPv4 address
-docker run --net=ipvlan120 --ip=192.168.120.10 -it --rm busybox 
+docker run --net=ipvlan120 --ip=192.168.120.10 -it --rm alpine /bin/sh 
 ```
 
 You will notice there is no `--gateway=` option in the network create. The field is ignored if one is specified since it doesn't have a use in `l3` mode. Take a look at the container routing table from inside of the container:
@@ -267,7 +267,7 @@ Example: start two containers and ping one another:
 # Create a v6 network
 docker network create -d macvlan  --subnet=fe90::/64 --gateway=fe90::22 -o host_iface=eth0 macnetv6
 # Start a container on the network
-docker run --net=macnetv6 -it --rm busybox
+docker run --net=macnetv6 -it --rm alpine /bin/sh
 
 ```
 
@@ -324,6 +324,6 @@ ip link set eth0.40 up
 docker network  create  -d ipvlan  --subnet=192.168.40.0/24 --gateway=192.168.40.1 -o host_iface=eth0.40 ipvlan40
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
-docker run --net=ipvlan40 -it --name ivlan_test5 --rm ubuntu
-docker run --net=ipvlan40 -it --name ivlan_test6 --rm ubuntu
+docker run --net=ipvlan40 -it --name ivlan_test5 --rm alpine /bin/sh
+docker run --net=ipvlan40 -it --name ivlan_test6 --rm alpine /bin/sh
 ```
