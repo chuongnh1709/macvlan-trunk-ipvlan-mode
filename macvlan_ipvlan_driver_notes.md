@@ -1,6 +1,6 @@
 
 # Macvlan, Ipvlan and 802.1q Trunk Driver Notes
-t
+
 ### Contents
 
  - [MacVlan Bridge Mode Example Usage](#macvlan-bridge-mode-example-usage)
@@ -197,6 +197,8 @@ default via 192.168.30.1 dev eth0
 
 
 ### IPVlan L3 Mode Example Usage ###
+
+IPVlan will require routes to be distributed to each endpoint. The driver only builds the Ipvlan L3 mode port and attaches the container to the interface. Route distribution throughout a cluster is beyond the scope of the initial driver. That said, here is some information for those curious how Ipvlan L3 will fit into container networking.
 
 -Ipvlan L3 mode drops all broadcast and multicast traffic. 
 -L3 mode needs to be on a separate subnet as the default namespace since it requires a netlink route in the default namespace pointing to the Ipvlan parent interface. 
