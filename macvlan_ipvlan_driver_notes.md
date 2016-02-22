@@ -31,7 +31,7 @@ Branch at: [https://github.com/nerdalert/libnetwork/tree/ipvlan_macvlan](https:/
 - More information about Ipvlan & Macvlan can be found in the upstream [readme](https://github.com/torvalds/linux/blob/master/Documentation/networking/ipvlan.txt)
  
 
-- If you just want to test the Docker binary with the drivers compiled in download: [docker-ipvlan-macvlan-binary.tar](https://www.dropbox.com/s/tsz9ktobg4dkwuy/docker-1.11.0-dev.zip?dl=1) 
+- If you just want to test the Docker binary with the drivers compiled in download: [docker-ipvlan-macvlan-binary.tar](https://www.dropbox.com/s/tsz9ktobg4dkwuy/docker-1.11.0-dev.zip) 
 
 - For a list of manual tests you can paste in and give a whirl see:  [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40)
 
