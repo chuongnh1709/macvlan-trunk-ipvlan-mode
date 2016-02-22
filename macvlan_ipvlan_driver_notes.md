@@ -1,6 +1,6 @@
 
 # Macvlan, Ipvlan and 802.1q Trunk Driver Notes
-
+t
 ### Contents
 
  - [MacVlan Bridge Mode Example Usage](#macvlan-bridge-mode-example-usage)
@@ -240,8 +240,11 @@ In order to ping the container from a remote host or the container be able to pi
 -If you have two hosts and one of them has a ipvlan l3 mode container running, the second host needs to have a route added to ping the container. The following are the addresses of the example of two hosts, host1 running docker with a container in ipvlan l3 mode and *host2* a regular host we will be pinging from the container and vice versa:
 
 -*Host1:* Docker Host eth0: 192.168.1.249/24
+
 -*Host1:* Docker ipvlan l3 mode container network: 192.168.130.0/24
+
 -*Host1:* Docker ipvlan l3 mode container IP: 192.168.130.2
+
 -*Host2:* Remote Host eth0: 192.168.1.251/24
 
 First, add a route to the remote host that tells the host, in order to reach the container network `192.168.130.0/24` on *Host1* use the next hop *Host1* eth0 `192.168.1.249`. By adding the following route to
