@@ -22,7 +22,7 @@ Branch at: [https://github.com/nerdalert/libnetwork/tree/ipvlan_macvlan](https:/
 
 
 - The driver caches `NetworkCreate` callbacks to the boltdb datastore along with populating `*networks`. In the case of a restart, the driver initializes the datastore with `Init()` and populates `*networks` since `NetworkCreate()` is only called once. 
-- There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `--host_interface` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `--host_interface`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. 
+- There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o host_iface` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o host_iface`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. 
 - The specified gateway is external to the host or at least not defined by the driver itself. 
 - Each network is isolated from one another. Any container inside the network/subnet can talk to one another without a reachable gateway in both `macvlan bridge` mode and `ipvlan L2` mode. IP tables may be able to work around that if a user wanted to.
 - Containers on separate networks cannot reach one another without an external process routing between the two networks/subnets.
@@ -50,7 +50,7 @@ Docker version 1.11.0-dev, build ac9d1b7-unsupported
 
 **Note** For Macvlan bridge mode and Ipvlan L2 mode the subnet values need to match the NIC's interface of the Docker host. For example, Use the same subnet and gateway of the Docker host ethernet interface that is specified by the `-o host_iface=` option.
 
-- The parent interface used in this example is `eth0` and it is on the subnet `192.168.1.0/24`. The containers in the `docker network` will also need to be on this same subnet as the parent `--host_iface=`. The gateway is an external router on the network, not any ip masquerading or any other local proxy (see [diagrams for topologies](https://cloud.githubusercontent.com/assets/1711674/13032315/099ddbb2-d2bb-11e5-86c1-a526ade612cc.jpg)).
+- The parent interface used in this example is `eth0` and it is on the subnet `192.168.1.0/24`. The containers in the `docker network` will also need to be on this same subnet as the parent `-o host_iface=`. The gateway is an external router on the network, not any ip masquerading or any other local proxy (see [diagrams for topologies](https://cloud.githubusercontent.com/assets/1711674/13032315/099ddbb2-d2bb-11e5-86c1-a526ade612cc.jpg)).
 
 - The driver is specified with `-d driver_name` option. In this case `-d macvlan`
 
@@ -92,7 +92,7 @@ ip addr show eth0
 Create the ipvlan network and run a container attaching to it:
 
 ```
-# Ipvlan  (--ipvlan_mode= Defaults to L2 mode if not specified)
+# Ipvlan  (-o ipvlan_mode= Defaults to L2 mode if not specified)
 docker network  create -d ipvlan  --subnet=192.168.1.0/24 --gateway=192.168.1.1 -o host_iface=eth0 ipnet100
 docker  run --net=ipnet100 -it --rm alpine /bin/sh
 ```
@@ -119,7 +119,7 @@ Replace the `macvlan` with `ipvlan` in the `-d` driver argument to create macvla
 
 **Vlan ID 50**
 
-In the first network tagged and isolated by the Docker host, `eth0.50` is the parent interface tagged with vlan id `50` specified with `-o host_iface=eth0.50`. Other naming formats can be used, but the links need to be added and deleted [manually](https://gist.github.com/nerdalert/28168b016112b7c13040#manually-creating-8021q-links) using `ip link` or Linux configuration files. As long as the `--host_iface` exists anything can be used if compliant with Linux netlink.
+In the first network tagged and isolated by the Docker host, `eth0.50` is the parent interface tagged with vlan id `50` specified with `-o host_iface=eth0.50`. Other naming formats can be used, but the links need to be added and deleted [manually](https://gist.github.com/nerdalert/28168b016112b7c13040#manually-creating-8021q-links) using `ip link` or Linux configuration files. As long as the `-o host_iface` exists anything can be used if compliant with Linux netlink.
 
 ```
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged
@@ -162,7 +162,7 @@ The example creates the vlan tagged networks and then start two containers to te
 
 **Vlan ID 20**
 
-In the first network tagged and isolated by the Docker host, `eth0.20` is the parent interface tagged with vlan id `20` specified with `-o host_iface=eth0.20`. Other naming formats can be used, but the links need to be added and deleted manually using `ip link` or Linux configuration files. As long as the `--host_iface` exists anything can be used if compliant with Linux netlink.
+In the first network tagged and isolated by the Docker host, `eth0.20` is the parent interface tagged with vlan id `20` specified with `-o host_iface=eth0.20`. Other naming formats can be used, but the links need to be added and deleted manually using `ip link` or Linux configuration files. As long as the `-o host_iface` exists anything can be used if compliant with Linux netlink.
 
 ```
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged
@@ -179,7 +179,7 @@ In the second network, tagged and isolated by the Docker host, `eth0.30` is the 
 
 ```
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged. 
-docker network  create  -d ipvlan  --subnet=192.168.30.0/24 --gateway=192.168.30.1 -o host_iface=eth0.30 --ipvlan_mode=l2 ipvlan30
+docker network  create  -d ipvlan  --subnet=192.168.30.0/24 --gateway=192.168.30.1 -o host_iface=eth0.30 -o ipvlan_mode=l2 ipvlan30
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
 docker run --net=ipvlan30 -it --name ivlan_test3 --rm alpine /bin/sh
@@ -203,7 +203,7 @@ IPVlan will require routes to be distributed to each endpoint. The driver only b
 -Ipvlan L3 mode drops all broadcast and multicast traffic. 
 -L3 mode needs to be on a separate subnet as the default namespace since it requires a netlink route in the default namespace pointing to the Ipvlan parent interface. 
 - The parent interface used in this example is `eth0` and it is on the subnet `192.168.1.0/24`. Notice the `docker network` is **not** on the same subnet as `eth0`.
-- Unlike macvlan bridge mode and ipvlan l2 modes, different subnets/networks can ping one another as long as they share the same parent interface `--host_interface=`.
+- Unlike macvlan bridge mode and ipvlan l2 modes, different subnets/networks can ping one another as long as they share the same parent interface `-o host_iface=`.
 
 ```
 ip a show eth0
