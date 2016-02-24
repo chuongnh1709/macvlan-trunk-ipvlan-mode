@@ -20,20 +20,18 @@
 
 Branch at: [https://github.com/nerdalert/libnetwork/tree/ipvlan_macvlan](https://github.com/nerdalert/libnetwork/tree/ipvlan_macvlan). This branch contains both macvlan and ipvlan as the mechanics are structure are very similar.
 
+- For a list of manual tests you can paste in and give a whirl see:  [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40)
 
 - The driver caches `NetworkCreate` callbacks to the boltdb datastore along with populating `*networks`. In the case of a restart, the driver initializes the datastore with `Init()` and populates `*networks` since `NetworkCreate()` is only called once. 
-- There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o host_iface` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o host_iface`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. 
+- There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o host_iface` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o host_iface`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. There are also implications mixing Ipvlan L2 & L3 simultaneously as L3 takes a NIC out of promiscous mode. For more information you can tail `dmesg` logs as you create networks & run containers. 
 - The specified gateway is external to the host or at least not defined by the driver itself. 
 - Each network is isolated from one another. Any container inside the network/subnet can talk to one another without a reachable gateway in both `macvlan bridge` mode and `ipvlan L2` mode. IP tables may be able to work around that if a user wanted to.
 - Containers on separate networks cannot reach one another without an external process routing between the two networks/subnets.
 - **Note:** In both Macvlan and Ipvlan you are not able to ping or communicate with the default namespace IP address. For example, if you create a container and try to ping the Docker host's `eth0` it will **not** work. That traffic is explicitly filtered by the kernel modules themselves to offer additional provider isolation and security.
 
 - More information about Ipvlan & Macvlan can be found in the upstream [readme](https://github.com/torvalds/linux/blob/master/Documentation/networking/ipvlan.txt)
- 
 
 - If you just want to test the Docker binary with the drivers compiled in download: [docker-ipvlan-macvlan-binary.tar](https://www.dropbox.com/s/tsz9ktobg4dkwuy/docker-1.11.0-dev.zip) 
-
-- For a list of manual tests you can paste in and give a whirl see:  [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40)
 
 - The Docker build is the following:
 
@@ -313,7 +311,7 @@ PING fe90::2 (fe90::1): 56 data bytes
 
 **Vlan ID 40**
 
-If you do not want the driver to create the vlan subinterface it simply needs to exist prior to the `docker network create`. 
+If you do not want the driver to create the vlan subinterface it simply needs to exist prior to the `docker network create`. If you have subinterface naming that is not `interface.vlan_id` it is honored in the `-o host_iface=` option again as long as the interface exists and us up. It will not be deleted by `docker network rm` either as long as it does not conform to the subinterface naming of `interface.vlan_id` or for example `eth0.10`. If it does match that it will be deleted when a network is deleted in order to GC links so the user does not have to worry about them. If the subinterface vlan link has a custom name and it does not exist at runtime, the network will not be initialized from persistent storage. It can either be deleted and recreated or restart the daemon with the link up.
 
 ```
 # create a new subinterface tied to dot1q vlan 40
