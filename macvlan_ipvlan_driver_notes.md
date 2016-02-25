@@ -18,7 +18,7 @@
  - [Manual 802.1q Link Creation Example](#manually-creating-8021q-links)
 
 
-Branch at: [https://github.com/nerdalert/libnetwork/tree/ipvlan_macvlan](https://github.com/nerdalert/libnetwork/tree/ipvlan_macvlan). This branch contains both macvlan and ipvlan as the mechanics are structure are very similar.
+Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
 
 - For a list of manual tests you can paste in and give a whirl see:  [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40)
 
