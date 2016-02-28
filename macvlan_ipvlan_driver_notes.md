@@ -192,7 +192,24 @@ default via 192.168.30.1 dev eth0
 192.168.30.0/24 dev eth0  src 192.168.30.2
 ```
 
+Example: Multi-Subnet Ipvlan L2 Mode starting two containers on the same subnet and pinging one another. In order for the `192.168.114.0/24` to reach `192.168.116.0/24` it requires an external router in L2 mode. L3 mode can route between subnets that share a common `-o host_iface=`. This same multi-subnet example is also valid for Macvlan `bridge` mode.
 
+Secondary addresses on network routers are common as an address space becomes exhausted to add another secondary to a L3 vlan interface or commonly refered to as a "switched virtual interface" (SVI).
+
+```
+docker network  create  -d ipvlan \
+	--subnet=192.168.114.0/24 --subnet=192.168.116.0/24 \
+	--gateway=192.168.114.254  --gateway=192.168.116.254 \
+	 -o host_iface=eth0.114 \
+	 -o ipvlan_mode=l2 ipvlan114
+	 
+docker run --net=ipvlan114 --ip=192.168.114.10 -it --rm alpine /bin/sh
+docker run --net=ipvlan114 --ip=192.168.114.11 -it --rm alpine /bin/sh
+```
+
+A key takeaway is operators have the ability to map their physical network into their virtual network for integrating containers into their environment with no opertaional overhauls required. 
+
+NetOps simply drops an 802.1q trunk into the Docker host or a bonded multi-link aggregation pair of connections to a top of rack that get bonded using LACP for example to create one virtual link. That virtual link would be the `-o host_interface` passed in the network creation. For single links it is as simple as `-o host_interface=eth0` for untagged or `-o host_interface=eth0.10` for a tag of VLAN 10.
 
 ### IPVlan L3 Mode Example Usage ###
 
@@ -255,57 +272,172 @@ After adding the above route to *Host1* it should be able to ping the L3 mode co
 
 L3 (layer 3) or ip routing has the ability to scale well beyond L2 (layer 2) networks. The Internet is made up of a collection of interconnected L3 networks. This is attractive when coupled with the density presented by migrations to Docker containers and worth spending some time to understand if new to scaling networks.
 
+- Example: Multi-Subnet Ipvlan L3 Network
+
+```
+docker network  create  -d ipvlan \
+	--subnet=192.168.110.0/24 --subnet=192.168.112.0/24 \
+	--gateway=192.168.110.1  --gateway=192.168.112.1 \
+	 -o host_iface=eth0.110 \
+	 -o ipvlan_mode=l3 ipvlan110
+
+# Container #1
+docker run --net=ipvlan110 --name=ipnet110_test --ip=192.168.110.10 -itd alpine /bin/sh
+# Container #2
+docker run --net=ipvlan110 --name=ipnet112_test --ip=192.168.112.10 -itd alpine /bin/sh
+
+```
+Once both are started, ping from one to the other:
+
+- Inside of Container #1
+```
+/ # ip a show eth0
+82: eth0@if81: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UNKNOWN
+    link/ether 00:50:56:2b:29:40 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.110.10/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::250:56ff:fe2b:2940/64 scope link
+       valid_lft forever preferred_lft forever
+/ #
+/ # ip route
+default dev eth0
+192.168.110.0/24 dev eth0  src 192.168.110.10
+/ #
+/ # ping 192.168.112.10
+PING 192.168.112.10 (192.168.112.10): 56 data bytes
+64 bytes from 192.168.112.10: seq=0 ttl=64 time=0.060 ms
+
+--- 192.168.112.10 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 0.060/0.060/0.060 ms
+```
+
+Inside of Container #2
+```
+/ # ip a show eth0
+83: eth0@if81: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UNKNOWN
+    link/ether 00:50:56:2b:29:40 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.112.10/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::250:56ff:fe2b:2940/64 scope link
+       valid_lft forever preferred_lft forever
+/ #
+/ # ip route
+default dev eth0
+192.168.112.0/24 dev eth0  src 192.168.112.10
+/ #
+/ # ping 192.168.110.10
+PING 192.168.110.10 (192.168.110.10): 56 data bytes
+64 bytes from 192.168.110.10: seq=0 ttl=64 time=0.137 ms
+
+--- 192.168.110.10 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 0.137/0.137/0.137 ms
+```
 
 ### IPv6 
 
 - Default to dual stack? Currently does with generic v4 and gateway services. If ipv4 is not specified should we disable gateway services and provision v6 only etc.
 - Should `EnableIPv6` be used? 
 
-Example: start two containers and ping one another:
+- Example: IpVlan L2 Mode w/ 802.1q Vlan Tag:139, IPv6 Gateway:fe91::22
+
+- Test: Start two containers on the same VLAN (139) and ping one another:
 
 ```
 # Create a v6 network
-docker network create -d macvlan  --subnet=fe90::/64 --gateway=fe90::22 -o host_iface=eth0 macnetv6
+docker network create -d ipvlan --subnet=fe91::/64 --gateway=fe91::22 -o host_iface=eth0.139 v6ipvlan139
 # Start a container on the network
-docker run --net=macnetv6 -it --rm alpine /bin/sh
+docker run --net=v6ipvlan139 -it --rm debian
 
 ```
 
-View the container eth0 interface:
+View the container eth0 interface and v6 routing table:
 
 ```
-# IP config of the container once it starts:
 
-$ ip addr show eth0
-eth0@if3: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
-    link/ether ce:26:6b:b8:27:11 brd ff:ff:ff:ff:ff:ff
-    inet 172.19.0.2/16 scope global eth0
+74: eth0@if55: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN group default
+    link/ether 00:50:56:2b:29:40 brd ff:ff:ff:ff:ff:ff
+    inet 172.18.0.2/16 scope global eth0
        valid_lft forever preferred_lft forever
-    inet6 fe80::cc26:6bff:feb8:2711/64 scope link tentative
+    inet6 fe80::250:56ff:fe2b:2940/64 scope link
        valid_lft forever preferred_lft forever
-    inet6 fe90::1/64 scope link flags 02
+    inet6 fe91::1/64 scope link nodad
        valid_lft forever preferred_lft forever
+       
+root@5c1dc74b1daa:/# ip -6 route
+fe80::/64 dev eth0  proto kernel  metric 256
+fe91::/64 dev eth0  proto kernel  metric 256
+default via fe91::22 dev eth0  metric 1024
 ```
 
-Start a second container and ping the first containers v6 address at `fe90::1` from it's address of `fe90::2`.
+Start a second container and ping the first container's v6 address. 
 
 ```
-$ ip a show eth0
-48: eth0@if2: <BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue
-    link/ether 06:09:43:a2:91:c3 brd ff:ff:ff:ff:ff:ff
-    inet 172.19.0.3/16 scope global eth0
-       valid_lft forever preferred_lft forever
-    inet6 fe80::409:43ff:fea2:91c3/64 scope link
-       valid_lft forever preferred_lft forever
-    inet6 fe90::2/64 scope link flags 02
-       valid_lft forever preferred_lft forever
+$ docker run --net=v6ipvlan139 -it --rm debian
 
-$ ping -6 fe90::1
-PING fe90::2 (fe90::1): 56 data bytes
-64 bytes from fe90::1: seq=0 ttl=64 time=0.044 ms
+root@b817e42fcc54:/# ip a show eth0
+75: eth0@if55: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN group default
+    link/ether 00:50:56:2b:29:40 brd ff:ff:ff:ff:ff:ff
+    inet 172.18.0.3/16 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::250:56ff:fe2b:2940/64 scope link tentative dadfailed
+       valid_lft forever preferred_lft forever
+    inet6 fe91::2/64 scope link nodad
+       valid_lft forever preferred_lft forever
+root@b817e42fcc54:/# ping6 fe91::1
+PING fe91::1 (fe91::1): 56 data bytes
+64 bytes from fe91::1%eth0: icmp_seq=0 ttl=64 time=0.044 ms
+64 bytes from fe91::1%eth0: icmp_seq=1 ttl=64 time=0.058 ms
+
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.044/0.051/0.058/0.000 ms
 ```
 
+Example: Dual Stack v4/v6 with a VLAN ID:140
 
+Next create a network with two IPv4 subnets and one IPv6 subnets, all of which have explicit gateways:
+
+```
+docker network  create  -d ipvlan \
+	--subnet=192.168.140.0/24 --subnet=192.168.142.0/24 \
+	--gateway=192.168.140.1  --gateway=192.168.142.1 \
+	--subnet=fe99::/64 --gateway=fe99::22 \
+	 -o host_iface=eth0.140 \
+	 -o ipvlan_mode=l2 ipvlan140
+```
+
+Start a container and view eth0 and both v4 & v6 routing tables:
+
+```
+docker run --net=v6ipvlan139 --ip6=fe91::51 -it --rm debian
+
+root@3cce0d3575f3:/# ip a show eth0
+78: eth0@if77: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN group default
+    link/ether 00:50:56:2b:29:40 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.140.2/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::250:56ff:fe2b:2940/64 scope link
+       valid_lft forever preferred_lft forever
+    inet6 fe99::1/64 scope link nodad
+       valid_lft forever preferred_lft forever
+
+root@3cce0d3575f3:/# ip route
+default via 192.168.140.1 dev eth0
+192.168.140.0/24 dev eth0  proto kernel  scope link  src 192.168.140.2
+
+root@3cce0d3575f3:/# ip -6 route
+fe80::/64 dev eth0  proto kernel  metric 256
+fe99::/64 dev eth0  proto kernel  metric 256
+default via fe99::22 dev eth0  metric 1024
+```
+
+Start a second container with a specific `--ip4` address and ping the first host using ipv4 packets:
+
+```
+docker run --net=ipvlan140 --ip=192.168.140.10 -it --rm debian
+```
+**Note**: Different subnets on the same parent interface in both Ipvlan `L2` mode and Macvlan `bridge` mode cannot ping one another. That requires a router to proxy-arp the requests with a secondary subnet. However, Ipvlan `L3` will route the unicast traffic between disparate subnets as long as they share the same `-o host_interface` parent link.
 
 ### Manually Creating 802.1q Links
 
@@ -327,3 +459,5 @@ docker network  create  -d ipvlan  --subnet=192.168.40.0/24 --gateway=192.168.40
 docker run --net=ipvlan40 -it --name ivlan_test5 --rm alpine /bin/sh
 docker run --net=ipvlan40 -it --name ivlan_test6 --rm alpine /bin/sh
 ```
+
+ A long list of examples can be found in the gist referenced at the beginning of the document here: [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40)
