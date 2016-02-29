@@ -11,11 +11,15 @@
 
  - [Ipvlan 802.1q Trunk L2 Mode Example Usage](#ipvlan-8021q-trunk-l2-mode-example-usage)
 
- - [IPVlan L3 Mode Example Usage](#ipvlan-l3-mode-example-usage)
+ - [IPVlan L3 Mode Example](#ipvlan-l3-mode-example)
 
- - [IPv6 Example Usage](#ipv6)
+ - [IPv6 Macvlan Bridge Mode](#ipv6-macvlan-bridge-mode)
+ - 
+ - [IPv6 Ipvlan L3 Mode](#ipv6-ipvlan-l2-mode)
+ - 
+ - [IPv6 Ipvlan L3 Mode](#ipv6-ipvlan-l3-mode)
 
- - [Manual 802.1q Link Creation Example](#manually-creating-8021q-links)
+ - [Manually Creating 802.1q Links](#manually-creating-8021q-links)
 
 
 Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
@@ -570,8 +574,9 @@ docker: Error response from daemon: Address already in use.
 
 **Vlan ID 40**
 
-If you do not want the driver to create the vlan subinterface it simply needs to exist prior to the `docker network create`. If you have subinterface naming that is not `interface.vlan_id` it is honored in the `-o host_iface=` option again as long as the interface exists and us up. It will not be deleted by `docker network rm` either as long as it does not conform to the subinterface naming of `interface.vlan_id` or for example `eth0.10`. If it does match that it will be deleted when a network is deleted in order to GC links so the user does not have to worry about them. If the subinterface vlan link has a custom name and it does not exist at runtime, the network will not be initialized from persistent storage. It can either be deleted and recreated or restart the daemon with the link up.
+If you do not want the driver to create the vlan subinterface it simply needs to exist prior to the `docker network create`. If you have subinterface naming that is not `interface.vlan_id` it is honored in the `-o host_iface=` option again as long as the interface exists and us up.
 
+Links if manually created can be named anything you want. As long as the exist when the network is created that is all that matters. Manually created links do not get deleted regardless of the name when the network is delted with `docker network rm`.
 
 ```
 # create a new subinterface tied to dot1q vlan 40
@@ -587,5 +592,29 @@ docker network  create  -d ipvlan  --subnet=192.168.40.0/24 --gateway=192.168.40
 docker run --net=ipvlan40 -it --name ivlan_test5 --rm alpine /bin/sh
 docker run --net=ipvlan40 -it --name ivlan_test6 --rm alpine /bin/sh
 ```
+
+**Example:** Vlan subinterface manually created with any name:
+
+```
+# create a new subinterface tied to dot1q vlan 40
+ip link add link eth0 name foobar type vlan id 40
+
+# enable the new sub-interface
+ip link set foobar up
+
+# now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged
+docker network  create  -d ipvlan  --subnet=192.168.40.0/24 --gateway=192.168.40.1 -o host_iface=foobar ipvlan40
+
+# in two separate terminals, start a Docker container and the containers can now ping one another.
+docker run --net=ipvlan40 -it --name ivlan_test5 --rm alpine /bin/sh
+docker run --net=ipvlan40 -it --name ivlan_test6 --rm alpine /bin/sh
+```
+
+Manually created links can be cleaned up with:
+
+```
+ip link del foobar
+```
+
 
  A long list of examples can be found in the gist referenced at the beginning of the document here: [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40)
