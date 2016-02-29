@@ -141,6 +141,23 @@ docker run --net=macvlan60 -it --name macvlan_test7 --rm alpine /bin/sh
 docker run --net=macvlan60 -it --name macvlan_test8 --rm alpine /bin/sh
 ```
 
+**Example:** Multi-Subnet Macvlan 802.1q Trunking
+
+The same as the example before except there is an additional subnet bound to the network that the user can choose to provision containers on. In MacVlan/Bridge mode, containers can only ping one another if they are on the same subnet/broadcast domain unless there is an external router that routes the traffic (answers ARP etc) between the two subnets.
+
+```
+### Create multiple bridge subnets with a gateway of x.x.x.1:
+docker network  create  -d macvlan \
+	--subnet=192.168.164.0/24 --subnet=192.168.166.0/24 \
+	--gateway=192.168.164.1  --gateway=192.168.166.1 \
+	 -o host_iface=eth0.166 \
+	 -o macvlan_mode=bridge macvlan64
+
+docker run --net=macvlan64 --name=macnet54_test --ip=192.168.164.10 -itd alpine /bin/sh
+docker run --net=macvlan64 --name=macnet55_test --ip=192.168.166.10 -itd alpine /bin/sh
+docker run --net=macvlan64 --ip=192.168.164.11 -it --rm alpine /bin/sh
+docker run --net=macvlan64 --ip=192.168.166.11 -it --rm alpine /bin/sh
+```
 
 ### Ipvlan 802.1q Trunk L2 Mode Example Usage ###
 
@@ -211,7 +228,7 @@ A key takeaway is operators have the ability to map their physical network into 
 
 NetOps simply drops an 802.1q trunk into the Docker host or a bonded multi-link aggregation pair of connections to a top of rack that get bonded using LACP for example to create one virtual link. That virtual link would be the `-o host_interface` passed in the network creation. For single links it is as simple as `-o host_interface=eth0` for untagged or `-o host_interface=eth0.10` for a tag of VLAN 10.
 
-### IPVlan L3 Mode Example Usage ###
+### IPVlan L3 Mode Example
 
 IPVlan will require routes to be distributed to each endpoint. The driver only builds the Ipvlan L3 mode port and attaches the container to the interface. Route distribution throughout a cluster is beyond the scope of the initial driver. That said, here is some information for those curious how Ipvlan L3 will fit into container networking.
 
@@ -250,8 +267,6 @@ default dev eth0
 ```
 
 
--Example: This route is added to the Docker host not the Docker container. `eth0` in the route has to be the same interface as specified in the `-o host_iface=eth0` network create.
-
 In order to ping the container from a remote host or the container be able to ping a remote host, the remote host needs to have a route pointing to the host IP address of the container's Docker host eth interface. 
 
 -If you have two hosts and one of them has a ipvlan l3 mode container running, the second host needs to have a route added to ping the container. The following are the addresses of the example of two hosts, host1 running docker with a container in ipvlan l3 mode and *host2* a regular host we will be pinging from the container and vice versa:
@@ -272,7 +287,7 @@ After adding the above route to *Host1* it should be able to ping the L3 mode co
 
 L3 (layer 3) or ip routing has the ability to scale well beyond L2 (layer 2) networks. The Internet is made up of a collection of interconnected L3 networks. This is attractive when coupled with the density presented by migrations to Docker containers and worth spending some time to understand if new to scaling networks.
 
-- Example: Multi-Subnet Ipvlan L3 Network
+**Example:** Multi-Subnet Ipvlan L3 Network
 
 ```
 docker network  create  -d ipvlan \
@@ -287,9 +302,11 @@ docker run --net=ipvlan110 --name=ipnet110_test --ip=192.168.110.10 -itd alpine 
 docker run --net=ipvlan110 --name=ipnet112_test --ip=192.168.112.10 -itd alpine /bin/sh
 
 ```
+
 Once both are started, ping from one to the other:
 
 - Inside of Container #1
+
 ```
 / # ip a show eth0
 82: eth0@if81: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UNKNOWN
@@ -313,6 +330,7 @@ round-trip min/avg/max = 0.060/0.060/0.060 ms
 ```
 
 Inside of Container #2
+
 ```
 / # ip a show eth0
 83: eth0@if81: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP,M-DOWN> mtu 1500 qdisc noqueue state UNKNOWN
@@ -335,18 +353,62 @@ PING 192.168.110.10 (192.168.110.10): 56 data bytes
 round-trip min/avg/max = 0.137/0.137/0.137 ms
 ```
 
-### IPv6 
+### IPv6 Macvlan Bridge Mode
 
-- Default to dual stack? Currently does with generic v4 and gateway services. If ipv4 is not specified should we disable gateway services and provision v6 only etc.
-- Should `EnableIPv6` be used? 
+**Example:** Macvlan Bridge mode, 802.1q trunk, VLAN ID: 218, Multi-Subnet, Dual Stack
 
-- Example: IpVlan L2 Mode w/ 802.1q Vlan Tag:139, IPv6 Gateway:fe91::22
+```
+### Create multiple bridge subnets with a gateway of x.x.x.1:
+docker network  create  -d macvlan \
+	--subnet=192.168.216.0/24 --subnet=192.168.218.0/24 \
+	--gateway=192.168.216.1  --gateway=192.168.218.1 \
+	--subnet=fe94::/64 --gateway=fe94::10 \
+	 -o host_iface=eth0.218 \
+	 -o macvlan_mode=bridge macvlan216
+
+docker run --net=macvlan216 --name=macnet216_test --ip=192.168.216.10 -itd debian
+docker run --net=macvlan216 --name=macnet216_test --ip=192.168.218.10 -itd debian
+docker run --net=macvlan216 --ip=192.168.216.11 -it --rm debian
+docker run --net=macvlan216 --ip=192.168.218.11 -it --rm debian
+```
+
+View the details of one of the containers
+
+```
+ docker run --net=macvlan216 --ip=192.168.216.11 -it --rm debian
+root@526f3060d759:/# ip a show eth0
+94: eth0@if92: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN group default
+    link/ether 8e:9a:99:25:b6:16 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.216.11/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::8c9a:99ff:fe25:b616/64 scope link tentative
+       valid_lft forever preferred_lft forever
+    inet6 fe94::2/64 scope link nodad
+       valid_lft forever preferred_lft forever
+       
+root@526f3060d759:/# ip route
+default via 192.168.216.1 dev eth0
+192.168.216.0/24 dev eth0  proto kernel  scope link  src 192.168.216.11
+
+root@526f3060d759:/# ip -6 route
+fe80::/64 dev eth0  proto kernel  metric 256
+fe94::/64 dev eth0  proto kernel  metric 256
+default via fe94::10 dev eth0  metric 1024
+```
+
+### IPv6 Ipvlan L2 Mode
+
+
+**Example:** IpVlan L2 Mode w/ 802.1q Vlan Tag:139, IPv6 Gateway:fe91::22
 
 - Test: Start two containers on the same VLAN (139) and ping one another:
 
 ```
 # Create a v6 network
-docker network create -d ipvlan --subnet=fe91::/64 --gateway=fe91::22 -o host_iface=eth0.139 v6ipvlan139
+docker network create -d ipvlan \
+	--subnet=fe91::/64 --gateway=fe91::22 \
+	-o host_iface=eth0.139 v6ipvlan139
+	
 # Start a container on the network
 docker run --net=v6ipvlan139 -it --rm debian
 
@@ -394,7 +456,7 @@ PING fe91::1 (fe91::1): 56 data bytes
 round-trip min/avg/max/stddev = 0.044/0.051/0.058/0.000 ms
 ```
 
-Example: Dual Stack v4/v6 with a VLAN ID:140
+**Example:** Dual Stack IPv4/IPv6 with a VLAN ID:140
 
 Next create a network with two IPv4 subnets and one IPv6 subnets, all of which have explicit gateways:
 
@@ -437,13 +499,79 @@ Start a second container with a specific `--ip4` address and ping the first host
 ```
 docker run --net=ipvlan140 --ip=192.168.140.10 -it --rm debian
 ```
+
 **Note**: Different subnets on the same parent interface in both Ipvlan `L2` mode and Macvlan `bridge` mode cannot ping one another. That requires a router to proxy-arp the requests with a secondary subnet. However, Ipvlan `L3` will route the unicast traffic between disparate subnets as long as they share the same `-o host_interface` parent link.
+
+
+
+### IPv6 Ipvlan L3 Mode 
+
+
+**Example:** IpVlan L3 Mode Dual Stack IPv4/IPv6, Multi-Subnet w/ 802.1q Vlan Tag:118
+
+As in all of the examples, a tagged VLAN interface does not have to be used. The subinterfaces can be swapped with `eth0`, `eth1` or any other valid interface on the host other then the `lo` loopback.
+
+The primary differnce you will see is that L3 mode does not create a default route with a next-hop but rather sets a default route pointing to `dev eth` only since ARP/Broadcasts/Multicase are all filtered by Linux as per the design.
+
+```
+# Create an IPv6+IPv4 Dual Stack Ipvlan L3 network 
+# Gateways for both v4 and v6 are set to a dev e.g. 'default dev eth0'
+docker network  create  -d ipvlan \
+	--subnet=192.168.110.0/24 \
+	--subnet=192.168.112.0/24 \
+	--subnet=fe90::/64 \
+	 -o host_iface=eth0.118 \
+	 -o ipvlan_mode=l3 ipvlan118
+
+
+# Start a few of containers on the network (ipvlan118) 
+# Using Debian here because how busybox iproute2 
+# handles unreachable network output is funky 
+docker run --net=ipvlan118 -it --rm debian
+# Start a second container specifying the v6 address
+docker run --net=ipvlan118 --ip6=fe90::10 -it --rm debian
+# Start a third specifying the IPv4 address
+docker run --net=ipvlan118 --ip=192.168.112.50 -it --rm debian
+# Start a 4th specifying both the IPv4 and IPv6 addresses
+docker run --net=ipvlan118 --ip6=fe90::50 --ip=192.168.112.50 -it --rm debian
+```
+
+Interface and routing table outputs are as follows:
+
+```
+root@3a368b2a982e:/# ip a show eth0
+63: eth0@if59: <BROADCAST,MULTICAST,NOARP,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN group default
+    link/ether 00:50:56:2b:29:40 brd ff:ff:ff:ff:ff:ff
+    inet 192.168.112.2/24 scope global eth0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::250:56ff:fe2b:2940/64 scope link
+       valid_lft forever preferred_lft forever
+    inet6 fe90::10/64 scope link nodad
+       valid_lft forever preferred_lft forever
+       
+root@3a368b2a982e:/# ip route
+default dev eth0  scope link
+192.168.112.0/24 dev eth0  proto kernel  scope link  src 192.168.112.2
+
+root@3a368b2a982e:/# ip -6 route
+fe80::/64 dev eth0  proto kernel  metric 256
+fe90::/64 dev eth0  proto kernel  metric 256
+default dev eth0  metric 1024
+```
+
+*Note:* There may be a bug when specifying `--ip6=` addresses when you delete a container with a specified v6 address and then start a new container with the same v6 address it throws the following like the address isn't properly being released to the v6 pool. It will fail to unmount the container and be left dead.
+
+```
+docker: Error response from daemon: Address already in use.
+```
+
 
 ### Manually Creating 802.1q Links
 
 **Vlan ID 40**
 
 If you do not want the driver to create the vlan subinterface it simply needs to exist prior to the `docker network create`. If you have subinterface naming that is not `interface.vlan_id` it is honored in the `-o host_iface=` option again as long as the interface exists and us up. It will not be deleted by `docker network rm` either as long as it does not conform to the subinterface naming of `interface.vlan_id` or for example `eth0.10`. If it does match that it will be deleted when a network is deleted in order to GC links so the user does not have to worry about them. If the subinterface vlan link has a custom name and it does not exist at runtime, the network will not be initialized from persistent storage. It can either be deleted and recreated or restart the daemon with the link up.
+
 
 ```
 # create a new subinterface tied to dot1q vlan 40
