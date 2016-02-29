@@ -14,9 +14,9 @@
  - [IPVlan L3 Mode Example](#ipvlan-l3-mode-example)
 
  - [IPv6 Macvlan Bridge Mode](#ipv6-macvlan-bridge-mode)
- - 
+
  - [IPv6 Ipvlan L3 Mode](#ipv6-ipvlan-l2-mode)
- - 
+
  - [IPv6 Ipvlan L3 Mode](#ipv6-ipvlan-l3-mode)
 
  - [Manually Creating 802.1q Links](#manually-creating-8021q-links)
