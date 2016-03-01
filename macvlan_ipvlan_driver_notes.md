@@ -24,7 +24,7 @@
 
 Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
 
-- For a list of manual tests you can paste in and give a whirl see:  [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40)
+- For a list of manual tests you can paste in and give a whirl see:  [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40) or a bash script to automate the tests for debugging: [ipvlan-macvlan-it.sh](https://github.com/nerdalert/dotfiles/blob/master/ipvlan-macvlan-it.sh)
 
 - The driver caches `NetworkCreate` callbacks to the boltdb datastore along with populating `*networks`. In the case of a restart, the driver initializes the datastore with `Init()` and populates `*networks` since `NetworkCreate()` is only called once. 
 - There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o host_iface` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o host_iface`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. There are also implications mixing Ipvlan L2 & L3 simultaneously as L3 takes a NIC out of promiscous mode. For more information you can tail `dmesg` logs as you create networks & run containers. 
