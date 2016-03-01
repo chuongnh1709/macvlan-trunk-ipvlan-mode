@@ -254,7 +254,12 @@ The mode ` -o ipvlan_mode=l3` must be explicitly specified since the default ipv
 
 ```
 # Create the Ipvlan L3 network
-docker network  create -d ipvlan --subnet=192.168.120.0/24 -o host_iface=eth0 -o ipvlan_mode=l3 ipvlan120
+docker network  create -d ipvlan \
+    --subnet=192.168.120.0/24 \
+    -o host_iface=eth0 \
+    -o ipvlan_mode=l3 ipvlan120
+    
+# Run a container on the new network
 docker run --net=ipvlan120 -it --rm alpine /bin/sh 
 
 # Or specify a specific IPv4 address
@@ -586,7 +591,10 @@ ip link add link eth0 name eth0.40 type vlan id 40
 ip link set eth0.40 up
 
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged
-docker network  create  -d ipvlan  --subnet=192.168.40.0/24 --gateway=192.168.40.1 -o host_iface=eth0.40 ipvlan40
+docker network  create  -d ipvlan \
+   --subnet=192.168.40.0/24 \
+   --gateway=192.168.40.1 \
+   -o host_iface=eth0.40 ipvlan40
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
 docker run --net=ipvlan40 -it --name ivlan_test5 --rm alpine /bin/sh
