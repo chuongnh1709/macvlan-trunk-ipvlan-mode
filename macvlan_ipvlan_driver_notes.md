@@ -24,8 +24,8 @@
 
 Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
 
-- For a list of manual tests you can paste in and give a whirl see:  [macvlan_ipvlan_docker_driver_manual_tests.txt](https://gist.github.com/nerdalert/9dcb14265a3aea336f40) or a bash script to automate the tests for debugging: [ipvlan-macvlan-it.sh](https://github.com/nerdalert/dotfiles/blob/master/ipvlan-macvlan-it.sh)
-
+- For a list of tests with 50+ different macvlan/ipvlan networking scenario that you can paste in and give a whirl, see this script: [ipvlan-macvlan-it.sh](https://github.com/nerdalert/dotfiles/blob/master/ipvlan-macvlan-it.sh). 
+- As the options change around a bit in experimental there may be a need for deleting the local driver boltdb k/v store. To do this simply stop the docker daemon, delete the network files `rm  /var/lib/docker/network/files/*` and start the docker daemon back up.
 - The driver caches `NetworkCreate` callbacks to the boltdb datastore along with populating `*networks`. In the case of a restart, the driver initializes the datastore with `Init()` and populates `*networks` since `NetworkCreate()` is only called once. 
 - There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o parent` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o parent`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. There are also implications mixing Ipvlan L2 & L3 simultaneously as L3 takes a NIC out of promiscous mode. For more information you can tail `dmesg` logs as you create networks & run containers. 
 - The specified gateway is external to the host or at least not defined by the driver itself. 
@@ -230,7 +230,7 @@ docker run --net=ipvlan114 --ip=192.168.114.11 -it --rm alpine /bin/sh
 
 A key takeaway is operators have the ability to map their physical network into their virtual network for integrating containers into their environment with no opertaional overhauls required. 
 
-NetOps simply drops an 802.1q trunk into the Docker host or a bonded multi-link aggregation pair of connections to a top of rack that get bonded using LACP for example to create one virtual link. That virtual link would be the `-o host_interface` passed in the network creation. For single links it is as simple as `-o host_interface=eth0` for untagged or `-o host_interface=eth0.10` for a tag of VLAN 10.
+NetOps simply drops an 802.1q trunk into the Docker host or a bonded multi-link aggregation pair of connections to a top of rack that get bonded using LACP for example to create one virtual link. That virtual link would be the `-o parent` passed in the network creation. For single links it is as simple as `-o parent=eth0` for untagged or `-o parent=eth0.10` for a tag of VLAN 10.
 
 ### IPVlan L3 Mode Example
 
@@ -381,6 +381,7 @@ docker run --net=macvlan216 --ip=192.168.216.11 -it --rm debian
 docker run --net=macvlan216 --ip=192.168.218.11 -it --rm debian
 ```
 
+
 View the details of one of the containers
 
 ```
@@ -509,7 +510,7 @@ Start a second container with a specific `--ip4` address and ping the first host
 docker run --net=ipvlan140 --ip=192.168.140.10 -it --rm debian
 ```
 
-**Note**: Different subnets on the same parent interface in both Ipvlan `L2` mode and Macvlan `bridge` mode cannot ping one another. That requires a router to proxy-arp the requests with a secondary subnet. However, Ipvlan `L3` will route the unicast traffic between disparate subnets as long as they share the same `-o host_interface` parent link.
+**Note**: Different subnets on the same parent interface in both Ipvlan `L2` mode and Macvlan `bridge` mode cannot ping one another. That requires a router to proxy-arp the requests with a secondary subnet. However, Ipvlan `L3` will route the unicast traffic between disparate subnets as long as they share the same `-o parent` parent link.
 
 
 
