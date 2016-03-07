@@ -74,7 +74,14 @@ Create the macvlan network and run a container attaching to it:
 
 ```
 # Macvlan  (--macvlan_mode= Defaults to Bridge mode if not specified)
-docker network  create  -d macvlan  --subnet=192.168.1.0/24 --gateway=192.168.1.1 -o parent=eth0 macnet100
+docker network  create  -d macvlan \
+    --subnet=192.168.1.0/24 \
+    --gateway=192.168.1.1 \
+    -o parent=eth0 macnet100
+
+# Run a container on the new network. 
+# NOTE: the containers can NOT ping the underlying host interfaces as
+# they are intentionally isolated by Linux filters for added isolation.
 docker  run --net=macnet100 -it --rm alpine /bin/sh
 ```
 
@@ -101,13 +108,17 @@ Create the ipvlan network and run a container attaching to it:
 
 ```
 # Ipvlan  (-o ipvlan_mode= Defaults to L2 mode if not specified)
-docker network  create -d ipvlan  --subnet=192.168.1.0/24 --gateway=192.168.1.1 -o parent=eth0 ipnet100
+docker network  create -d ipvlan \
+    --subnet=192.168.1.0/24 \ 
+    --gateway=192.168.1.1 
+    -o parent=eth0 ipnet100
+
+# NOTE: the containers can NOT ping the underlying host interfaces as
+# they are intentionally isolated by Linux filters for added isolation.
 docker  run --net=ipnet100 -it --rm alpine /bin/sh
 ```
 
 You can explicitly specify the `l2` mode option `-o ipvlan_mode=l2`. It is the default so will be in `l2` mode either way.
-
-
 
 
 ### Macvlan 802.1q Trunk Bridge Mode Example Usage ###
@@ -131,9 +142,12 @@ In the first network tagged and isolated by the Docker host, `eth0.50` is the pa
 
 ```
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged
-docker network  create  -d macvlan  --subnet=192.168.50.0/24 --gateway=192.168.50.1 -o parent=eth0.50 macvlan50
+docker network  create  -d macvlan \
+    --subnet=192.168.50.0/24 \
+    --gateway=192.168.50.1 \
+    -o parent=eth0.50 macvlan50
 
-# in two separate terminals, start a Docker container and the containers can now ping one another.
+# In two separate terminals, start a Docker container and the containers can now ping one another.
 docker run --net=macvlan50 -it --name macvlan_test5 --rm alpine /bin/sh
 docker run --net=macvlan50 -it --name macvlan_test6 --rm alpine /bin/sh
 ```
@@ -144,9 +158,13 @@ In the second network, tagged and isolated by the Docker host, `eth0.60` is the 
 
 ```
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged. 
-docker network  create  -d macvlan  --subnet=192.168.60.0/24 --gateway=192.168.60.1 -o parent=eth0.60 -o --macvlan_mode=bridge macvlan60
+docker network  create  -d macvlan \
+    --subnet=192.168.60.0/24 \
+    --gateway=192.168.60.1 \
+    -o parent=eth0.60 -o \
+    --macvlan_mode=bridge macvlan60
 
-# in two separate terminals, start a Docker container and the containers can now ping one another.
+# In two separate terminals, start a Docker container and the containers can now ping one another.
 docker run --net=macvlan60 -it --name macvlan_test7 --rm alpine /bin/sh
 docker run --net=macvlan60 -it --name macvlan_test8 --rm alpine /bin/sh
 ```
@@ -191,7 +209,10 @@ In the first network tagged and isolated by the Docker host, `eth0.20` is the pa
 
 ```
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged
-docker network  create  -d ipvlan  --subnet=192.168.20.0/24 --gateway=192.168.20.1 -o parent=eth0.20 ipvlan20
+docker network  create  -d ipvlan \
+    --subnet=192.168.20.0/24 \
+    --gateway=192.168.20.1 \
+    -o parent=eth0.20 ipvlan20
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
 docker run --net=ipvlan20 -it --name ivlan_test1 --rm alpine /bin/sh
@@ -204,7 +225,11 @@ In the second network, tagged and isolated by the Docker host, `eth0.30` is the 
 
 ```
 # now add networks and hosts as you would normally by attaching to the master (sub)interface that is tagged. 
-docker network  create  -d ipvlan  --subnet=192.168.30.0/24 --gateway=192.168.30.1 -o parent=eth0.30 -o ipvlan_mode=l2 ipvlan30
+docker network  create  -d ipvlan \
+--subnet=192.168.30.0/24 \
+--gateway=192.168.30.1 \
+-o parent=eth0.30 \
+-o ipvlan_mode=l2 ipvlan30
 
 # in two separate terminals, start a Docker container and the containers can now ping one another.
 docker run --net=ipvlan30 -it --name ivlan_test3 --rm alpine /bin/sh
@@ -280,7 +305,6 @@ $ ip route
 default dev eth0
 192.168.120.0/24 dev eth0  src 192.168.120.2
 ```
-
 
 In order to ping the container from a remote host or the container be able to ping a remote host, the remote host needs to have a route pointing to the host IP address of the container's Docker host eth interface. 
 
