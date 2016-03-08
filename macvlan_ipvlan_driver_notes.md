@@ -26,8 +26,6 @@ Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
 
 - See this script: [ipvlan-macvlan-it.sh](https://github.com/nerdalert/dotfiles/blob/master/ipvlan-macvlan-it.sh) for a list of tests with 50+ different macvlan/ipvlan networking scenario that you can copy and paste to give the drivers a whirl. 
 
-- If you just want to test the Docker experimental binary with the drivers compiled in download: [docker-1.11.0-dev.zip](https://github.com/nerdalert/dotfiles/files/162406/docker-1.11.0-dev.zip). The driver's persistent database ([boltdb](https://github.com/boltdb/bolt)) data models are subject to change while the drivers are still under review/development. As they change if you created a network with an older model you may see some nil value errors when you start docker and an old model from an existing network created by the macvlan or ipvlan drivers get populated. You can reset the k/v boltdb database by simply deleting the datastore file with `rm /var/lib/docker/network/files/local-kv.db`.
-
 - As the options change around a bit in experimental there may be a need for deleting the local driver boltdb k/v store. To do this simply stop the docker daemon, delete the network files `rm  /var/lib/docker/network/files/*` and start the docker daemon back up.
 - The driver caches `NetworkCreate` callbacks to the boltdb datastore along with populating `*networks`. In the case of a restart, the driver initializes the datastore with `Init()` and populates `*networks` since `NetworkCreate()` is only called once. 
 - There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o parent` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o parent`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. There are also implications mixing Ipvlan L2 & L3 simultaneously as L3 takes a NIC out of promiscous mode. For more information you can tail `dmesg` logs as you create networks & run containers. 
@@ -38,14 +36,12 @@ Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
 
 - More information about Ipvlan & Macvlan can be found in the upstream [readme](https://github.com/torvalds/linux/blob/master/Documentation/networking/ipvlan.txt)
 
-- The Docker build is the following:
 
-```
-docker -v
-Docker version 1.11.0-dev, build ac9d1b7-unsupported
-```
+### Pre-Requisite
 
-1. Download the zipped experimental binary above or here: [docker-1.11.0-dev.zip](https://github.com/nerdalert/dotfiles/files/160936/docker-1.11.0-dev.zip)
+- If you just want to test the Docker experimental binary with the drivers compiled in download: [docker-1.11.0-dev.zip](https://github.com/nerdalert/dotfiles/files/162406/docker-1.11.0-dev.zip). The driver's persistent database ([boltdb](https://github.com/boltdb/bolt)) data models are subject to change while the drivers are still under review/development. As they change if you created a network with an older model you may see some nil value errors when you start docker and an old model from an existing network created by the macvlan or ipvlan drivers get populated. You can reset the k/v boltdb database by simply deleting the datastore file with `rm /var/lib/docker/network/files/local-kv.db`.
+
+1. Download the zipped experimental binary (or build from the PR in libnetwork): [docker-1.11.0-dev.zip](https://github.com/nerdalert/dotfiles/files/162406/docker-1.11.0-dev.zip)
 2. Unzip it on a Linux OS.
 3. Stop any other docker instances `killall docker`
 4. `./docker-1.11.0-dev daemon` (optionally, add `-D` for extra debugging logs).
