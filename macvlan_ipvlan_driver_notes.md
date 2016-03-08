@@ -3,6 +3,8 @@
 
 ### Contents
 
+ - [Getting Started](https://gist.github.com/nerdalert/c0363c15d20986633fda#getting-started)
+
  - [MacVlan Bridge Mode Example Usage](#macvlan-bridge-mode-example-usage)
 
  - [Ipvlan L2 Mode Example Usage](#ipvlan-l2-mode-example-usage)
@@ -28,7 +30,7 @@ Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
 
 - As the options change around a bit in experimental there may be a need for deleting the local driver boltdb k/v store. To do this simply stop the docker daemon, delete the network files `rm  /var/lib/docker/network/files/*` and start the docker daemon back up.
 - The driver caches `NetworkCreate` callbacks to the boltdb datastore along with populating `*networks`. In the case of a restart, the driver initializes the datastore with `Init()` and populates `*networks` since `NetworkCreate()` is only called once. 
-- There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o parent` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o parent`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. There are also implications mixing Ipvlan L2 & L3 simultaneously as L3 takes a NIC out of promiscous mode. For more information you can tail `dmesg` logs as you create networks & run containers. 
+- There can only be one (ipvlan or macvlan) driver type bound to a host interface with running containers at any given time. Currently the driver does not prevent ipvlan and macvlan networks to be created with the same `-o parent` but will throw an error if you try to start an ipvlan container and a macvlan container at the same time on the same `-o parent`. A mix of host interfaces and macvlan/ipvlan types can be used with running containers, each interface just needs to use the same type. Example: Macvlan Bridge or IPVlan L2. There is no mixing of running containers on the same host interface. There are also implications mixing Ipvlan L2 & L3 simultaneously as L3 takes a NIC out of promiscuous mode. For more information you can tail `dmesg` logs as you create networks & run containers. 
 - The specified gateway is external to the host or at least not defined by the driver itself. 
 - Each network is isolated from one another. Any container inside the network/subnet can talk to one another without a reachable gateway in both `macvlan bridge` mode and `ipvlan L2` mode. IP tables may be able to work around that if a user wanted to.
 - Containers on separate networks cannot reach one another without an external process routing between the two networks/subnets.
@@ -37,7 +39,7 @@ Branch at: [PR#964](https://github.com/docker/libnetwork/pull/964).
 - More information about Ipvlan & Macvlan can be found in the upstream [readme](https://github.com/torvalds/linux/blob/master/Documentation/networking/ipvlan.txt)
 
 
-### Pre-Requisite
+### Getting Started
 
 - If you just want to test the Docker experimental binary with the drivers compiled in download: [docker-1.11.0-dev.zip](https://github.com/nerdalert/dotfiles/files/162406/docker-1.11.0-dev.zip). The driver's persistent database ([boltdb](https://github.com/boltdb/bolt)) data models are subject to change while the drivers are still under review/development. As they change if you created a network with an older model you may see some nil value errors when you start docker and an old model from an existing network created by the macvlan or ipvlan drivers get populated. You can reset the k/v boltdb database by simply deleting the datastore file with `rm /var/lib/docker/network/files/local-kv.db`.
 
@@ -125,9 +127,9 @@ You can explicitly specify the `l2` mode option `-o ipvlan_mode=l2`. It is the d
 
 Start two containers to test a ping. The default namespace is not reachable per macvlan design in order to isolate container namespaces from the underlying host.
 
-The Linux subinterface tagged with a vlan can either already exist or will be created when you call a `docker network create`. `docker network rm` will delete the subinterface. Parent interfaces such as `eth0` are not deleted, only subinterfaces with a netlink parent index > 0.
+The Linux sub-interface tagged with a vlan can either already exist or will be created when you call a `docker network create`. `docker network rm` will delete the sub-interface. Parent interfaces such as `eth0` are not deleted, only sub-interfaces with a netlink parent index > 0.
 
-For the driver to add/delete the vlan subinterfaces the format needs to be `interface_name.vlan_tag`. 
+For the driver to add/delete the vlan sub-interfaces the format needs to be `interface_name.vlan_tag`. 
 
 For example: `eth0.50` denotes a parent interface of `eth0` with a slave of `eth0.50` tagged with vlan id `50`. The equivalent `ip link` command would be `ip link add link eth0 name eth0.50 type vlan id 50`.
 
@@ -190,13 +192,13 @@ Architecturally, Ipvlan L2 mode trunking is the same as Macvlan with regard to g
 
 <a href="url"><img src="https://cloud.githubusercontent.com/assets/1711674/13232776/9e93b966-d97e-11e5-8803-e30e0d913e47.jpg" align="center" width="350" ></a>
 
-The Linux subinterface tagged with a vlan can either already exist or will be created when you call a `docker network create`. `docker network rm` will delete the subinterface. Parent interfaces such as `eth0` are not deleted, only subinterfaces with a netlink parent index > 0.
+The Linux sub-interface tagged with a vlan can either already exist or will be created when you call a `docker network create`. `docker network rm` will delete the sub-interface. Parent interfaces such as `eth0` are not deleted, only sub-interfaces with a netlink parent index > 0.
 
-For the driver to add/delete the vlan subinterfaces the format needs to be `interface_name.vlan_tag`. Other subinterface naming can be used as the spacified parent, but the link will not be deleted automatically when `docker network rm` is invoked. 
+For the driver to add/delete the vlan sub-interfaces the format needs to be `interface_name.vlan_tag`. Other sub-interface naming can be used as the specified parent, but the link will not be deleted automatically when `docker network rm` is invoked. 
 
-The option to use either existing parent vlan subinterfaces or let Docker manage them enables the user to either completely manage the Linux interfaces and networking or let Docker create and delete the Vlan parent subinterfaces (netlink `ip link`) with no effort from the user.
+The option to use either existing parent vlan sub-interfaces or let Docker manage them enables the user to either completely manage the Linux interfaces and networking or let Docker create and delete the Vlan parent sub-interfaces (netlink `ip link`) with no effort from the user.
 
-For example: `eth0.10` or `eth0:10` to denote a subinterface of `eth0` tagged with vlan id `10`. The equivalent `ip link` command would be `ip link add link eth0 name eth0.10 type vlan id 10`.
+For example: `eth0.10` or `eth0:10` to denote a sub-interface of `eth0` tagged with vlan id `10`. The equivalent `ip link` command would be `ip link add link eth0 name eth0.10 type vlan id 10`.
 
 The example creates the vlan tagged networks and then start two containers to test connectivity between containers. Different Vlans cannot ping one another without a router routing between the two networks. The default namespace is not reachable per ipvlan design in order to isolate container namespaces from the underlying host.
 
@@ -243,7 +245,7 @@ default via 192.168.30.1 dev eth0
 
 Example: Multi-Subnet Ipvlan L2 Mode starting two containers on the same subnet and pinging one another. In order for the `192.168.114.0/24` to reach `192.168.116.0/24` it requires an external router in L2 mode. L3 mode can route between subnets that share a common `-o parent=`. This same multi-subnet example is also valid for Macvlan `bridge` mode.
 
-Secondary addresses on network routers are common as an address space becomes exhausted to add another secondary to a L3 vlan interface or commonly refered to as a "switched virtual interface" (SVI).
+Secondary addresses on network routers are common as an address space becomes exhausted to add another secondary to a L3 vlan interface or commonly refereed to as a "switched virtual interface" (SVI).
 
 ```
 docker network  create  -d ipvlan \
@@ -256,7 +258,7 @@ docker run --net=ipvlan114 --ip=192.168.114.10 -it --rm alpine /bin/sh
 docker run --net=ipvlan114 --ip=192.168.114.11 -it --rm alpine /bin/sh
 ```
 
-A key takeaway is operators have the ability to map their physical network into their virtual network for integrating containers into their environment with no opertaional overhauls required. 
+A key takeaway is operators have the ability to map their physical network into their virtual network for integrating containers into their environment with no operational overhauls required. 
 
 NetOps simply drops an 802.1q trunk into the Docker host or a bonded multi-link aggregation pair of connections to a top of rack that get bonded using LACP for example to create one virtual link. That virtual link would be the `-o parent` passed in the network creation. For single links it is as simple as `-o parent=eth0` for untagged or `-o parent=eth0.10` for a tag of VLAN 10.
 
@@ -548,7 +550,7 @@ docker run --net=ipvlan140 --ip=192.168.140.10 -it --rm debian
 
 As in all of the examples, a tagged VLAN interface does not have to be used. The subinterfaces can be swapped with `eth0`, `eth1` or any other valid interface on the host other then the `lo` loopback.
 
-The primary differnce you will see is that L3 mode does not create a default route with a next-hop but rather sets a default route pointing to `dev eth` only since ARP/Broadcasts/Multicase are all filtered by Linux as per the design.
+The primary difference you will see is that L3 mode does not create a default route with a next-hop but rather sets a default route pointing to `dev eth` only since ARP/Broadcasts/Multicast are all filtered by Linux as per the design.
 
 ```
 # Create an IPv6+IPv4 Dual Stack Ipvlan L3 network 
@@ -607,12 +609,12 @@ docker: Error response from daemon: Address already in use.
 
 **Vlan ID 40**
 
-If you do not want the driver to create the vlan subinterface it simply needs to exist prior to the `docker network create`. If you have subinterface naming that is not `interface.vlan_id` it is honored in the `-o parent=` option again as long as the interface exists and us up.
+If you do not want the driver to create the vlan sub-interface it simply needs to exist prior to the `docker network create`. If you have sub-interface naming that is not `interface.vlan_id` it is honored in the `-o parent=` option again as long as the interface exists and us up.
 
-Links if manually created can be named anything you want. As long as the exist when the network is created that is all that matters. Manually created links do not get deleted regardless of the name when the network is delted with `docker network rm`.
+Links if manually created can be named anything you want. As long as the exist when the network is created that is all that matters. Manually created links do not get deleted regardless of the name when the network is deleted with `docker network rm`.
 
 ```
-# create a new subinterface tied to dot1q vlan 40
+# create a new sub-interface tied to dot1q vlan 40
 ip link add link eth0 name eth0.40 type vlan id 40
 
 # enable the new sub-interface
@@ -629,10 +631,10 @@ docker run --net=ipvlan40 -it --name ivlan_test5 --rm alpine /bin/sh
 docker run --net=ipvlan40 -it --name ivlan_test6 --rm alpine /bin/sh
 ```
 
-**Example:** Vlan subinterface manually created with any name:
+**Example:** Vlan sub-interface manually created with any name:
 
 ```
-# create a new subinterface tied to dot1q vlan 40
+# create a new sub interface tied to dot1q vlan 40
 ip link add link eth0 name foobar type vlan id 40
 
 # enable the new sub-interface
