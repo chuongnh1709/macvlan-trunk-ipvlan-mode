@@ -109,7 +109,7 @@ Create the ipvlan network and run a container attaching to it:
 # Ipvlan  (-o ipvlan_mode= Defaults to L2 mode if not specified)
 docker network  create -d ipvlan \
     --subnet=192.168.1.0/24 \ 
-    --gateway=192.168.1.1 
+    --gateway=192.168.1.1 \
     -o parent=eth0 ipnet100
 
 # NOTE: the containers can NOT ping the underlying host interfaces as
